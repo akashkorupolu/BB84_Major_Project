@@ -1,0 +1,329 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Light theme — “paper + forest” (warm + organic) */
+    --background: 38 55% 97%;
+    --foreground: 162 35% 12%;
+
+    --card: 38 55% 99%;
+    --card-foreground: 162 35% 12%;
+
+    --popover: 38 55% 99%;
+    --popover-foreground: 162 35% 12%;
+
+    /* Brand (copper) */
+    --primary: 24 78% 46%;
+    --primary-foreground: 38 55% 98%;
+    --primary-glow: 48 95% 55%;
+
+    /* Roles (botanical) */
+    --alice: 170 70% 33%;
+    --alice-foreground: 38 55% 98%;
+    --bob: 148 55% 34%;
+    --bob-foreground: 38 55% 98%;
+    --eve: 350 75% 45%;
+    --eve-foreground: 38 55% 98%;
+
+    --secondary: 36 30% 92%;
+    --secondary-foreground: 162 35% 14%;
+
+    --muted: 36 24% 92%;
+    --muted-foreground: 160 12% 40%;
+
+    --accent: 50 70% 92%;
+    --accent-foreground: 162 35% 12%;
+
+    --destructive: 350 75% 45%;
+    --destructive-foreground: 38 55% 98%;
+
+    --border: 34 20% 85%;
+    --input: 34 20% 85%;
+    --ring: 24 78% 46%;
+
+    --radius: 1rem;
+
+    /* Panel surface (used by Card) */
+    --panel: hsla(38, 55%, 99%, 0.78);
+    --panel-border: hsla(162, 35%, 12%, 0.10);
+    --shadow: 0 18px 50px rgba(24, 16, 8, 0.12);
+
+    /* Channel */
+    --quantum-channel: linear-gradient(
+      90deg,
+      hsl(38 55% 98%) 0%,
+      hsl(45 55% 95%) 50%,
+      hsl(38 55% 98%) 100%
+    );
+    --photon-glow: 0 0 18px hsl(var(--primary-glow) / 0.35);
+
+    /* Bit coding */
+    --bit-0-rectilinear: 170 70% 33%;
+    --bit-1-rectilinear: 24 78% 46%;
+    --bit-0-diagonal: 350 75% 45%;
+    --bit-1-diagonal: 148 55% 34%;
+
+    /* Status */
+    --success: 148 55% 34%;
+    --success-foreground: 38 55% 98%;
+    --warning: 48 95% 55%;
+    --warning-foreground: 162 35% 12%;
+
+    --sidebar-background: 0 0% 100%;
+    --sidebar-foreground: 265 40% 15%;
+    --sidebar-primary: 270 75% 55%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 275 60% 92%;
+    --sidebar-accent-foreground: 265 40% 15%;
+    --sidebar-border: 270 25% 85%;
+    --sidebar-ring: 270 75% 55%;
+  }
+
+  .dark {
+    /* Dark theme — “midnight + neon mint” (high-contrast, modern) */
+    --background: 250 35% 6%;
+    --foreground: 210 40% 98%;
+
+    --card: 252 34% 9%;
+    --card-foreground: 210 40% 98%;
+
+    --popover: 252 34% 9%;
+    --popover-foreground: 210 40% 98%;
+
+    /* Brand (neon mint) */
+    --primary: 172 90% 52%;
+    --primary-foreground: 250 35% 6%;
+    --primary-glow: 292 88% 62%;
+
+    /* Roles (electric set) */
+    --alice: 205 95% 58%;
+    --alice-foreground: 250 35% 6%;
+    --bob: 172 90% 52%;
+    --bob-foreground: 250 35% 6%;
+    --eve: 335 92% 60%;
+    --eve-foreground: 250 35% 6%;
+
+    --secondary: 252 26% 14%;
+    --secondary-foreground: 210 40% 98%;
+
+    --muted: 252 24% 12%;
+    --muted-foreground: 225 18% 74%;
+
+    --accent: 252 26% 14%;
+    --accent-foreground: 210 40% 98%;
+
+    --destructive: 335 92% 60%;
+    --destructive-foreground: 250 35% 6%;
+
+    --border: 252 22% 18%;
+    --input: 252 22% 18%;
+    --ring: 172 90% 52%;
+
+    /* Panel surface (used by Card) */
+    --panel: hsla(252, 34%, 12%, 0.76);
+    --panel-border: hsla(210, 40%, 98%, 0.12);
+    --shadow: 0 18px 75px rgba(0, 0, 0, 0.62);
+
+    --sidebar-background: 240 5.9% 10%;
+    --sidebar-foreground: 240 4.8% 95.9%;
+    --sidebar-primary: 224.3 76.3% 48%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 240 3.7% 15.9%;
+    --sidebar-accent-foreground: 240 4.8% 95.9%;
+    --sidebar-border: 240 3.7% 15.9%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
+
+    --quantum-channel: linear-gradient(
+      90deg,
+      hsl(250 35% 6%) 0%,
+      hsl(252 34% 10%) 50%,
+      hsl(250 35% 6%) 100%
+    );
+
+    --photon-glow: 0 0 22px hsl(var(--primary) / 0.35);
+
+    /* Bit coding */
+    --bit-0-rectilinear: 205 95% 58%;
+    --bit-1-rectilinear: 292 88% 62%;
+    --bit-0-diagonal: 335 92% 60%;
+    --bit-1-diagonal: 172 90% 52%;
+
+    /* Status */
+    --success: 172 90% 52%;
+    --success-foreground: 250 35% 6%;
+    --warning: 48 100% 62%;
+    --warning-foreground: 250 35% 6%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans transition-colors duration-300;
+    min-height: 100vh;
+  }
+
+  body.light {
+    background:
+      radial-gradient(1100px 650px at 18% -12%, hsl(var(--primary) / 0.10), transparent 56%),
+      radial-gradient(900px 540px at 92% -8%, hsl(var(--primary-glow) / 0.10), transparent 56%),
+      radial-gradient(700px 520px at 50% 120%, hsl(var(--alice) / 0.08), transparent 62%),
+      hsl(var(--background));
+  }
+
+  body.dark {
+    background:
+      radial-gradient(1150px 700px at 12% -18%, hsl(var(--primary) / 0.22), transparent 56%),
+      radial-gradient(980px 640px at 92% -12%, hsl(var(--primary-glow) / 0.18), transparent 58%),
+      radial-gradient(720px 520px at 50% 120%, hsl(var(--eve) / 0.10), transparent 64%),
+      hsl(var(--background));
+  }
+}
+
+@layer components {
+  .panel {
+    background: var(--panel);
+    backdrop-filter: blur(14px);
+    border: 1px solid var(--panel-border);
+    box-shadow: var(--shadow);
+  }
+
+  /* Photon Animations */
+  .photon {
+    @apply relative inline-block w-3 h-3 rounded-full;
+    box-shadow: var(--photon-glow);
+    animation: photon-pulse 2s infinite ease-in-out;
+  }
+
+  .photon-travel {
+    animation: photon-move 0.8s cubic-bezier(0.22, 0.61, 0.36, 1) forwards;
+  }
+
+  .photon-glitch {
+    animation: eve-glitch 0.12s ease-in-out;
+  }
+
+  /* Basis Icons */
+  .basis-plus::before {
+    content: "+";
+    @apply font-bold text-lg;
+  }
+
+  .basis-cross::before {
+    content: "×";
+    @apply font-bold text-lg;
+  }
+
+  /* Quantum Channel */
+  .quantum-channel {
+    background: var(--quantum-channel);
+    position: relative;
+    overflow: hidden;
+    border: 1px solid hsl(var(--border));
+  }
+
+  .quantum-channel::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background:
+      repeating-linear-gradient(
+        90deg,
+        transparent,
+        transparent 26px,
+        hsla(190, 95%, 55%, 0.06) 26px,
+        hsla(190, 95%, 55%, 0.06) 52px
+      ),
+      radial-gradient(400px 120px at 30% 50%, hsl(var(--primary) / 0.12), transparent 70%),
+      radial-gradient(450px 120px at 70% 50%, hsl(var(--primary-glow) / 0.10), transparent 70%);
+    animation: quantum-flow 6s linear infinite;
+  }
+
+  /* Chat Bubbles */
+  .chat-alice {
+    @apply bg-alice/15 border border-alice/25 text-foreground ml-0 mr-auto;
+  }
+
+  .chat-bob {
+    @apply bg-bob/15 border border-bob/25 text-foreground ml-auto mr-0;
+  }
+
+  .chat-eve {
+    @apply bg-eve/15 border border-eve/25 text-foreground mx-auto;
+  }
+
+  .chat-system {
+    @apply bg-muted/40 border border-border text-muted-foreground mx-auto;
+  }
+}
+
+@keyframes photon-pulse {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.7;
+    transform: scale(1.1);
+  }
+}
+
+@keyframes photon-move {
+  0% {
+    transform: translateX(0) translateY(0);
+  }
+  100% {
+    transform: translateX(400px) translateY(0);
+  }
+}
+
+@keyframes eve-glitch {
+  0% {
+    transform: translateX(0) rotate(0deg);
+    filter: hue-rotate(0deg);
+  }
+  25% {
+    transform: translateX(-2px) rotate(-1deg);
+    filter: hue-rotate(90deg);
+  }
+  75% {
+    transform: translateX(2px) rotate(1deg);
+    filter: hue-rotate(-90deg);
+  }
+  100% {
+    transform: translateX(0) rotate(0deg);
+    filter: hue-rotate(0deg);
+  }
+}
+
+@keyframes quantum-flow {
+  0% {
+    transform: translateX(-40px);
+  }
+  100% {
+    transform: translateX(40px);
+  }
+}
+
+/* Bit Color Classes */
+.bit-0-plus {
+  background-color: hsl(var(--bit-0-rectilinear));
+}
+.bit-1-plus {
+  background-color: hsl(var(--bit-1-rectilinear));
+}
+.bit-0-cross {
+  background-color: hsl(var(--bit-0-diagonal));
+}
+.bit-1-cross {
+  background-color: hsl(var(--bit-1-diagonal));
+}

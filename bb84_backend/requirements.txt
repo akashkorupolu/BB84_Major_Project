@@ -1,0 +1,7 @@
+fastapi
+pydantic
+uvicorn
+matplotlib
+qiskit
+qiskit_aer
+pylatexenc
