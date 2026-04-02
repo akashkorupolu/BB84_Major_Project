@@ -1,8 +1,9 @@
 import axios from "axios";
 import { AttackModel, Basis, Bit } from "@/types/bb84";
 
-// ✅ Use LOCAL backend instead of Render
-const API_BASE_URL = "http://127.0.0.1:8000";
+const API_BASE_URL =
+  (import.meta as any).env?.VITE_API_BASE_URL?.toString?.() ||
+  "http://127.0.0.1:8000";
 
 const api = axios.create({
   baseURL: API_BASE_URL,
