@@ -1,19 +1,17 @@
 import matplotlib
 matplotlib.use("Agg")
-from fastapi import FastAPI,Query
+from fastapi import FastAPI, Query
 from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
-from qiskit import QuantumCircuit, transpile,QuantumRegister, ClassicalRegister
+from qiskit import QuantumCircuit, transpile, QuantumRegister, ClassicalRegister
 from qiskit_aer import Aer
 import random
 import hashlib
 import matplotlib.pyplot as plt
-from qiskit.visualization import plot_bloch_vector, circuit_drawer, plot_state_city
-from qiskit.quantum_info import Statevector
+from qiskit.visualization import plot_bloch_vector, circuit_drawer
+from qiskit.quantum_info import Pauli, Statevector
 import io
 import base64
-from fastapi.responses import JSONResponse
-from qiskit.quantum_info import Pauli
 app = FastAPI(title="BB84 Quantum Key Distribution API (Qiskit)")
 
 app.add_middleware(
@@ -22,7 +20,6 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
-    
 )
 
 # ---------------------------
@@ -103,7 +100,6 @@ def measure_qubit(qc: QuantumCircuit, basis: str) -> int:
     return measured_bit
 
 
-
 def build_alice_circuit():
     n = len(qubits_sent)
     qr = QuantumRegister(n, "q")
@@ -151,13 +147,16 @@ def build_bob_circuit():
             qc.measure(qr[i], cr[i])
 
     return qc
+
+
 # ---------------------------
 # API Endpoints
 # ---------------------------
 
+
 @app.get("/")
 def welcome():
-    return {"message":"Welcome to api"}
+    return {"message": "Welcome to api"}
 
 @app.get("/health")
 def health_check():
@@ -242,6 +241,8 @@ def eves_intercept(
         qc_in = eve_qc
 
     return {"msg": "Eves intercepted", "index": index, "results": results}
+
+
 @app.post("/bob/measure/{index}")
 def bob_measure(index: int, b: BobMeasure, loss_prob: float = Query(0.0, ge=0.0, le=1.0)):
     if index >= len(qubits_sent):
@@ -276,53 +277,9 @@ def bob_measure(index: int, b: BobMeasure, loss_prob: float = Query(0.0, ge=0.0,
 
     if len(qubits_bob) <= index:
         qubits_bob.extend([None] * (index - len(qubits_bob) + 1))
-    qubits_bob[index] = {"basis": b.basis, "measured": measured, "qc": bob_qc}  # ✅ keep qc in memory
+    qubits_bob[index] = {"basis": b.basis, "measured": measured, "qc": bob_qc}
 
-    # Return only JSON-safe data
     return {"msg": "Bob measured", "index": index, "lost": False, "bob_result": bob_result}
-# @app.get("/eve/intercept/{index}")
-# def eve_intercept(index: int):
-#     """Eve intercepts qubit and measures it with random basis."""
-#     if index >= len(qubits_sent):
-#         return {"error": "Invalid qubit index"}
-
-#     q = qubits_sent[index]
-#     eve_basis = random.choice(["+", "x"])
-
-#     qc = q["qc"].copy()
-#     measured = measure_qubit(qc, eve_basis)
-
-#     eve_result = {"basis": eve_basis, "measured": measured}
-#     if len(qubits_eve) <= index:
-#         qubits_eve.extend([None] * (index - len(qubits_eve) + 1))
-#     qubits_eve[index] = eve_result
-
-#     return {"msg": "Eve intercepted", "index": index, "eve_result": eve_result}
-
-
-# @app.post("/bob/measure/{index}")
-# def bob_measure(index: int, b: BobMeasure):
-#     """Bob measures qubit at position `index` with his basis."""
-#     if index >= len(qubits_sent):
-#         return {"error": "Invalid qubit index"}
-
-#     q = qubits_sent[index]
-
-#     # If Eve already measured, collapse happened
-#     if len(qubits_eve) > index and qubits_eve[index]:
-#         eve_info = qubits_eve[index]
-#         qc = prepare_qubit(eve_info["measured"], eve_info["basis"])
-#     else:
-#         qc = q["qc"].copy()
-
-#     measured = measure_qubit(qc, b.basis)
-
-#     bob_result = {"basis": b.basis, "measured": measured}
-#     if len(qubits_bob) <= index:
-#         qubits_bob.extend([None] * (index - len(qubits_bob) + 1))
-#     qubits_bob[index] = bob_result
-
-#     return {"msg": "Bob measured", "index": index, "bob_result": bob_result}
 
 
 @app.get("/compare-bases")
@@ -330,16 +287,6 @@ def compare_bases():
     """Alice and Bob publicly compare bases, keep only matching ones."""
     if not qubits_sent or not qubits_bob:
         return {"error": "No qubits to compare"}
-    
-    # print("Alice");
-    # for i in range(len(qubits_sent)):
-    #     print({"bit":qubits_sent[i]["bit"], "basis":qubits_sent[i]["basis"]})
-    # print("Eve");
-    # for i in range(len(qubits_eve)):
-    #     print({"bit":qubits_eve[i]["measured"], "basis":qubits_eve[i]["basis"]})
-    # print("Bob");
-    # for i in range(len(qubits_bob)):
-    #     print({"bit":qubits_bob[i]["measured"], "basis":qubits_bob[i]["basis"]})
 
     matching_indices = []
     alice_key = []
@@ -353,16 +300,10 @@ def compare_bases():
             alice_key.append(qubits_sent[i]["bit"])
             bob_key.append(qubits_bob[i]["measured"])
 
-    # print({
-    #     "matching_indices": matching_indices,
-    #     "alice_key": alice_key,
-    #     "bob_key": bob_key
-    # })
-
     return {
         "matching_indices": matching_indices,
         "alice_key": alice_key,
-        "bob_key": bob_key
+        "bob_key": bob_key,
     }
 
 
@@ -492,12 +433,9 @@ def visualize_qubit(index: int):
     qc = qubits_sent[index]["qc"]
     state = Statevector.from_instruction(qc)
 
-    # --- Circuit ---
     fig_circuit = circuit_drawer(qc, output="mpl")
     circuit_base64 = fig_to_base64(fig_circuit)
 
-    # --- Bloch ---
-    from qiskit.quantum_info import Pauli
     bloch_vector = [
         state.expectation_value(Pauli("X")).real,
         state.expectation_value(Pauli("Y")).real,
@@ -537,13 +475,10 @@ def visualize_qubit(who: str, index: int):
     else:
         return {"error": "No data for this participant/index"}
 
-    # Circuit diagram
     fig_circuit = circuit_drawer(qsource, output="mpl")
     circuit_base64 = fig_to_base64(fig_circuit)
 
-    # Bloch vector
     state = Statevector.from_instruction(qsource)
-    from qiskit.quantum_info import Pauli
     bloch_vector = [
         state.expectation_value(Pauli("X")).real,
         state.expectation_value(Pauli("Y")).real,
@@ -563,7 +498,6 @@ def visualize_bloch(index: int):
     qc = qubits_sent[index]["qc"]
     state = Statevector.from_instruction(qc)
 
-    # ✅ Compute Bloch vector with Pauli operators
     bloch_vector = [
         state.expectation_value(Pauli("X")).real,
         state.expectation_value(Pauli("Y")).real,
