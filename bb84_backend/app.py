@@ -1,17 +1,11 @@
-import matplotlib
-matplotlib.use("Agg")
 from fastapi import FastAPI, Query
 from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
-from qiskit import QuantumCircuit, transpile, QuantumRegister, ClassicalRegister
+from qiskit import QuantumCircuit, transpile
 from qiskit_aer import Aer
 import random
 import hashlib
-import matplotlib.pyplot as plt
-from qiskit.visualization import plot_bloch_vector, circuit_drawer
-from qiskit.quantum_info import Pauli, Statevector
-import io
-import base64
+
 app = FastAPI(title="BB84 Quantum Key Distribution API (Qiskit)")
 
 app.add_middleware(
@@ -62,14 +56,6 @@ def pick_eve_basis(attack_model: str, bias_basis: str, bias_prob: float) -> str:
 # ---------------------------
 # Helper: Prepare qubit state with Qiskit
 # ---------------------------
-def fig_to_base64(fig):
-    buf = io.BytesIO()
-    fig.savefig(buf, format="png", bbox_inches="tight")
-    buf.seek(0)
-    encoded = base64.b64encode(buf.read()).decode("utf-8")
-    plt.close(fig)
-    return encoded
-
 def prepare_qubit(bit: int, basis: str):
     qc = QuantumCircuit(1, 1)
 
@@ -98,55 +84,6 @@ def measure_qubit(qc: QuantumCircuit, basis: str) -> int:
     counts = result.get_counts()
     measured_bit = int(max(counts, key=counts.get))
     return measured_bit
-
-
-def build_alice_circuit():
-    n = len(qubits_sent)
-    qr = QuantumRegister(n, "q")
-    qc = QuantumCircuit(qr)
-
-    for i, q in enumerate(qubits_sent):
-        if q["bit"] == 1:
-            qc.x(qr[i])
-        if q["basis"] == "x":
-            qc.h(qr[i])
-
-    return qc
-
-def build_eve_circuit():
-    n = len(qubits_sent)
-    qr = QuantumRegister(n, "q")
-    cr = ClassicalRegister(n, "c")
-    qc = QuantumCircuit(qr, cr)
-
-    for i in range(n):
-        if i < len(qubits_eve) and qubits_eve[i]:  # Eve acted
-            eve_basis = qubits_eve[i]["basis"]
-            if eve_basis == "x":
-                qc.h(qr[i])
-            qc.measure(qr[i], cr[i])
-            qc.reset(qr[i])
-            if qubits_eve[i]["measured"] == 1:
-                qc.x(qr[i])
-            if eve_basis == "x":
-                qc.h(qr[i])
-
-    return qc
-
-def build_bob_circuit():
-    n = len(qubits_sent)
-    qr = QuantumRegister(n, "q")
-    cr = ClassicalRegister(n, "c")
-    qc = QuantumCircuit(qr, cr)
-
-    for i in range(n):
-        if i < len(qubits_bob) and qubits_bob[i]:
-            bob_basis = qubits_bob[i]["basis"]
-            if bob_basis == "x":
-                qc.h(qr[i])
-            qc.measure(qr[i], cr[i])
-
-    return qc
 
 
 # ---------------------------
@@ -271,7 +208,6 @@ def bob_measure(index: int, b: BobMeasure, loss_prob: float = Query(0.0, ge=0.0,
 
     measured = measure_qubit(qc, b.basis)
 
-    # Keep Bob's QC in memory only
     bob_qc = prepare_qubit(measured, b.basis)
     bob_result = {"basis": b.basis, "measured": measured}
 
@@ -348,162 +284,3 @@ def reset(cfg: ResetConfig | None = None):
     qubits_bob = []
     eve_count = int(cfg.eve_count) if cfg and cfg.eve_count is not None else 0
     return {"msg": "State reset"}
-
-
-@app.get("/visualize/overall-circuit")
-def visualize_overall(eve: str = Query("false")):
-    """
-    Build and return the entire BB84 protocol as one big circuit diagram.
-    eve: "true"/"false"/"1"/"0"/etc as query param.
-    """
-    # Normalize string → bool
-    eve_normalized = str(eve).lower() in ["true", "1", "yes", "on"]
-
-    n = len(qubits_sent)
-    if n == 0:
-        return {"error": "No qubits yet, run simulation first."}
-
-    qr = QuantumRegister(n, "q")
-    cr = ClassicalRegister(n, "c")
-    qc = QuantumCircuit(qr, cr)
-
-    alice_bits = [q["bit"] for q in qubits_sent]
-    alice_bases = [q["basis"] for q in qubits_sent]
-    bob_bases = [b["basis"] if b else "+" for b in qubits_bob]
-
-    for i in range(n):
-        # Alice encodes
-        if alice_bits[i] == 1:
-            qc.x(qr[i])
-        if alice_bases[i] == "x":
-            qc.h(qr[i])
-
-        # Optional Eve
-        if eve_normalized and i < len(qubits_eve) and qubits_eve[i]:
-            eve_basis = qubits_eve[i]["basis"]
-            if eve_basis == "x":
-                qc.h(qr[i])
-            qc.measure(qr[i], cr[i])
-            qc.reset(qr[i])
-            if qubits_eve[i]["measured"] == 1:
-                qc.x(qr[i])
-            if eve_basis == "x":
-                qc.h(qr[i])
-
-        # Bob
-        if i < len(bob_bases) and bob_bases[i] == "x":
-            qc.h(qr[i])
-        qc.measure(qr[i], cr[i])
-
-    fig = qc.draw("mpl")
-    encoded = fig_to_base64(fig)
-    return {"img_base64": encoded}
-
-@app.get("/visualize/overall/alice")
-def visualize_overall_alice():
-    if not qubits_sent:
-        return {"error": "No qubits prepared yet."}
-    qc = build_alice_circuit()
-    fig = qc.draw("mpl")
-    return {"img_base64": fig_to_base64(fig)}
-
-@app.get("/visualize/overall/eve")
-def visualize_overall_eve():
-    if not qubits_eve:
-        return {"error": "Eve has not intercepted any qubits."}
-    qc = build_eve_circuit()
-    fig = qc.draw("mpl")
-    return {"img_base64": fig_to_base64(fig)}
-
-@app.get("/visualize/overall/bob")
-def visualize_overall_bob():
-    if not qubits_bob:
-        return {"error": "Bob has not measured any qubits yet."}
-    qc = build_bob_circuit()
-    fig = qc.draw("mpl")
-    return {"img_base64": fig_to_base64(fig)}
-
-
-@app.get("/visualize/{index}")
-def visualize_qubit(index: int):
-    """Return both circuit diagram and Bloch sphere in one request."""
-    if index >= len(qubits_sent):
-        return {"error": "Invalid qubit index"}
-
-    qc = qubits_sent[index]["qc"]
-    state = Statevector.from_instruction(qc)
-
-    fig_circuit = circuit_drawer(qc, output="mpl")
-    circuit_base64 = fig_to_base64(fig_circuit)
-
-    bloch_vector = [
-        state.expectation_value(Pauli("X")).real,
-        state.expectation_value(Pauli("Y")).real,
-        state.expectation_value(Pauli("Z")).real,
-    ]
-    fig_bloch = plot_bloch_vector(bloch_vector)
-    bloch_base64 = fig_to_base64(fig_bloch)
-
-    return {"circuit": circuit_base64, "bloch": bloch_base64}
-
-
-@app.get("/visualize/circuit/{index}")
-def visualize_circuit(index: int):
-    """Return a base64-encoded circuit diagram for qubit at index."""
-    if index >= len(qubits_sent):
-        return {"error": "Invalid qubit index"}
-
-    qc = qubits_sent[index]["qc"]
-    fig = circuit_drawer(qc, output="mpl")
-    encoded = fig_to_base64(fig)
-    return {"img_base64": encoded}
-
-
-@app.get("/visualize/{who}/{index}")
-def visualize_qubit(who: str, index: int):
-    """
-    Visualize qubit state for Alice, Eve, or Bob.
-    who = 'alice' | 'eve' | 'bob'
-    """
-    qsource = None
-    if who == "alice" and index < len(qubits_sent):
-        qsource = qubits_sent[index]["qc"]
-    elif who == "eve" and index < len(qubits_eve) and qubits_eve[index]:
-        qsource = qubits_eve[index]["qc"]
-    elif who == "bob" and index < len(qubits_bob) and qubits_bob[index]:
-        qsource = qubits_bob[index]["qc"]
-    else:
-        return {"error": "No data for this participant/index"}
-
-    fig_circuit = circuit_drawer(qsource, output="mpl")
-    circuit_base64 = fig_to_base64(fig_circuit)
-
-    state = Statevector.from_instruction(qsource)
-    bloch_vector = [
-        state.expectation_value(Pauli("X")).real,
-        state.expectation_value(Pauli("Y")).real,
-        state.expectation_value(Pauli("Z")).real,
-    ]
-    fig_bloch = plot_bloch_vector(bloch_vector)
-    bloch_base64 = fig_to_base64(fig_bloch)
-
-    return {"circuit": circuit_base64, "bloch": bloch_base64}
-
-@app.get("/visualize/bloch/{index}")
-def visualize_bloch(index: int):
-    """Return a Bloch sphere for qubit state at index."""
-    if index >= len(qubits_sent):
-        return {"error": "Invalid qubit index"}
-
-    qc = qubits_sent[index]["qc"]
-    state = Statevector.from_instruction(qc)
-
-    bloch_vector = [
-        state.expectation_value(Pauli("X")).real,
-        state.expectation_value(Pauli("Y")).real,
-        state.expectation_value(Pauli("Z")).real,
-    ]
-
-    fig = plot_bloch_vector(bloch_vector)
-    encoded = fig_to_base64(fig)
-    return {"img_base64": encoded}

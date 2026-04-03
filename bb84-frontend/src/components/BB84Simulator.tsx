@@ -19,9 +19,6 @@ import { ResultsCard } from "./ResultsCard";
 import { Navbar } from "./Navbar";
 import { BB84Api, handleApiError } from "@/services/bb84Api";
 import { useToast } from "@/hooks/use-toast";
-import QubitVisualizer from "./QubitVisualizer";
-import MultiQubitVisualizer from "./MultiQubitVisualizer";
-import OverallCircuit from "./OverallCircuit";
 import { HackathonFooter } from "./HackathonFooter";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
@@ -58,7 +55,6 @@ export const BB84Simulator = ({
     errorRate: 0,
     speed: "normal",
   });
-  const [showCircuits, setShowCircuits] = useState(true);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [photons, setPhotons] = useState<PhotonData[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -636,27 +632,6 @@ export const BB84Simulator = ({
               </Tabs>
             </div>
           </div>
-
-          {/* <MultiQubitVisualizer
-          index={state.currentRound - 1}
-          totalRounds={state.totalRounds}
-        /> */}
-
-          {/* {state.step === "complete" && (
-            <div className="my-4">
-              <Button
-                variant="outline"
-                onClick={() => setShowCircuits(!showCircuits)}
-                className="mb-4"
-              >
-                {showCircuits ? "Hide Circuits" : "Show Circuits"}
-              </Button>
-
-              {showCircuits && (
-                <OverallCircuit eve={state.mode === "with-eve"} />
-              )}
-            </div>
-          )} */}
         </div>
       </div>
     </div>

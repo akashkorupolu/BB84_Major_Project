@@ -45,10 +45,6 @@ export interface BobMeasureResponse {
   };
 }
 
-export interface VisualizationResponse {
-  img_base64: string;
-}
-
 export interface EveInterceptResponse {
   msg: string;
   index: number;
@@ -140,51 +136,6 @@ export class BB84Api {
 
   static async getFinalKey(): Promise<FinalKeyResponse> {
     const response = await api.get("/final-key");
-    return response.data;
-  }
-
-  // Visualization APIs
-  static async getCircuit(index: number): Promise<VisualizationResponse> {
-    const response = await api.get(`/visualize/circuit/${index}`);
-    return response.data;
-  }
-
-  static async getBloch(index: number): Promise<VisualizationResponse> {
-    const response = await api.get(`/visualize/bloch/${index}`);
-    return response.data;
-  }
-
-  static async getOverallCircuit(
-    eve: boolean = false
-  ): Promise<{ img_base64: string }> {
-    const response = await api.get(`/visualize/overall-circuit?eve=${eve}`);
-    return response.data;
-  }
-
-  static async getOverallAliceCircuit(): Promise<{ img_base64: string }> {
-    const response = await api.get("/visualize/overall/alice");
-    return response.data;
-  }
-
-  static async getOverallEveCircuit(): Promise<{ img_base64: string }> {
-    const response = await api.get("/visualize/overall/eve");
-    return response.data;
-  }
-
-  static async getOverallBobCircuit(): Promise<{ img_base64: string }> {
-    const response = await api.get("/visualize/overall/bob");
-    return response.data;
-  }
-
-  static async getQubitVisualization(
-    who: "alice" | "eve" | "bob",
-    index: number
-  ): Promise<{
-    error: any;
-    circuit: string;
-    bloch: string;
-  }> {
-    const response = await api.get(`/visualize/${who}/${index}`);
     return response.data;
   }
 
