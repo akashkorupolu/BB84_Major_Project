@@ -17,7 +17,7 @@ import { ControlPanel } from "./ControlPanel";
 import { ChatLog } from "./ChatLog";
 import { ResultsCard } from "./ResultsCard";
 import { Navbar } from "./Navbar";
-import { BB84Api, handleApiError } from "@/services/bb84Api";
+import { BB84Api, computeQberFraction, handleApiError } from "@/services/bb84Api";
 import { useToast } from "@/hooks/use-toast";
 import { HackathonFooter } from "./HackathonFooter";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -338,10 +338,15 @@ export const BB84Simulator = ({
 
       const result = await BB84Api.compareBases();
 
-      const qberFraction =
+      const fromKeys = computeQberFraction(result.alice_key, result.bob_key);
+      const fromApiPercent =
         result.qber_percent != null && !Number.isNaN(result.qber_percent)
           ? result.qber_percent / 100
-          : 0;
+          : null;
+      // Prefer computing from sifted bit strings so QBER is correct even if the
+      // API omits qber_percent (older server) or fields are mis-typed.
+      const qberFraction =
+        fromKeys !== null ? fromKeys : fromApiPercent !== null ? fromApiPercent : 0;
 
       setState((prev) => ({
         ...prev,
@@ -353,6 +358,10 @@ export const BB84Simulator = ({
       addMessage(
         "system",
         `Publicly compared bases: ${result.matching_indices.length} matches found`
+      );
+      addMessage(
+        "system",
+        `Sifted QBER: ${(qberFraction * 100).toFixed(1)}%`
       );
       addMessage(
         "alice",
@@ -395,11 +404,17 @@ export const BB84Simulator = ({
         return;
       }
 
-      const errPct =
-        result.error_rate != null && !Number.isNaN(result.error_rate)
-          ? result.error_rate
-          : 0;
-      const errFraction = errPct / 100;
+      let errPct: number;
+      let errFraction: number;
+      if (result.error_rate != null && !Number.isNaN(result.error_rate)) {
+        errPct = result.error_rate;
+        errFraction = errPct / 100;
+      } else {
+        const comp = await BB84Api.compareBases();
+        const q = computeQberFraction(comp.alice_key, comp.bob_key);
+        errFraction = q ?? 0;
+        errPct = errFraction * 100;
+      }
 
       setState((prev) => ({
         ...prev,

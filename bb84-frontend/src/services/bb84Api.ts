@@ -31,6 +31,16 @@ export interface CompareBasesResponse {
   qber_percent?: number;
 }
 
+/** QBER as a fraction in [0, 1] from sifted keys (same definition as the backend). */
+export function computeQberFraction(
+  alice: number[] | undefined,
+  bob: number[] | undefined
+): number | null {
+  if (!alice?.length || !bob || alice.length !== bob.length) return null;
+  const errors = alice.reduce((n, a, i) => n + (a !== bob[i] ? 1 : 0), 0);
+  return errors / alice.length;
+}
+
 export interface FinalKeyResponse {
   shared_key?: string;
   shared_key_sha256?: string | null;
