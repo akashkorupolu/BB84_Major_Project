@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useRef } from "react";
+import { useState, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button"; // if you’re using shadcn/ui
 import {
@@ -17,7 +17,13 @@ import { ControlPanel } from "./ControlPanel";
 import { ChatLog } from "./ChatLog";
 import { ResultsCard } from "./ResultsCard";
 import { Navbar } from "./Navbar";
-import { BB84Api, computeQberFraction, handleApiError } from "@/services/bb84Api";
+import {
+  BB84Api,
+  computeQberFraction,
+  countSiftedBitErrors,
+  normalizeQberFraction,
+  handleApiError,
+} from "@/services/bb84Api";
 import { useToast } from "@/hooks/use-toast";
 import { HackathonFooter } from "./HackathonFooter";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -50,6 +56,8 @@ export const BB84Simulator = ({
     lostPhotons: [],
     eveInterceptions: [],
     matchingIndices: [],
+    siftedTotal: 0,
+    siftedErrorCount: 0,
     sharedKey: "",
     sharedKeyHash: "",
     errorRate: 0,
@@ -140,6 +148,8 @@ export const BB84Simulator = ({
         lostPhotons: new Array(state.totalRounds).fill(false),
         eveInterceptions: [],
         matchingIndices: [],
+        siftedTotal: 0,
+        siftedErrorCount: 0,
         sharedKey: "",
         sharedKeyHash: "",
         errorRate: 0,
@@ -338,21 +348,34 @@ export const BB84Simulator = ({
 
       const result = await BB84Api.compareBases();
 
+      const siftedTotal = result.alice_key?.length ?? 0;
+      const siftedErrorCount =
+        result.error_count != null && !Number.isNaN(result.error_count)
+          ? result.error_count
+          : countSiftedBitErrors(result.alice_key, result.bob_key);
+
       const fromKeys = computeQberFraction(result.alice_key, result.bob_key);
       const fromApiPercent =
         result.qber_percent != null && !Number.isNaN(result.qber_percent)
           ? result.qber_percent / 100
           : null;
-      // Prefer computing from sifted bit strings so QBER is correct even if the
-      // API omits qber_percent (older server) or fields are mis-typed.
+      // Authoritative: errors ÷ sifted when we have counts (matches progress bar).
       const qberFraction =
-        fromKeys !== null ? fromKeys : fromApiPercent !== null ? fromApiPercent : 0;
+        siftedTotal > 0
+          ? siftedErrorCount / siftedTotal
+          : fromKeys !== null
+            ? fromKeys
+            : fromApiPercent !== null
+              ? fromApiPercent
+              : 0;
 
       setState((prev) => ({
         ...prev,
         step: "comparing",
         matchingIndices: result.matching_indices,
-        errorRate: qberFraction,
+        siftedTotal,
+        siftedErrorCount,
+        errorRate: normalizeQberFraction(qberFraction),
       }));
 
       addMessage(
@@ -406,13 +429,24 @@ export const BB84Simulator = ({
 
       let errPct: number;
       let errFraction: number;
-      if (result.error_rate != null && !Number.isNaN(result.error_rate)) {
-        errPct = result.error_rate;
-        errFraction = errPct / 100;
+      const sc = result.sifted_count;
+      const ac = result.agreeing_count;
+      if (
+        sc != null &&
+        ac != null &&
+        sc > 0 &&
+        !Number.isNaN(sc) &&
+        !Number.isNaN(ac)
+      ) {
+        errFraction = normalizeQberFraction((sc - ac) / sc);
+        errPct = errFraction * 100;
+      } else if (result.error_rate != null && !Number.isNaN(result.error_rate)) {
+        errFraction = normalizeQberFraction(result.error_rate);
+        errPct = errFraction * 100;
       } else {
         const comp = await BB84Api.compareBases();
         const q = computeQberFraction(comp.alice_key, comp.bob_key);
-        errFraction = q ?? 0;
+        errFraction = normalizeQberFraction(q ?? 0);
         errPct = errFraction * 100;
       }
 
@@ -422,6 +456,11 @@ export const BB84Simulator = ({
         sharedKey: result.shared_key ?? "",
         sharedKeyHash: result.shared_key_sha256 ?? "",
         errorRate: errFraction,
+        siftedTotal: result.sifted_count ?? prev.siftedTotal,
+        siftedErrorCount:
+          result.sifted_count != null && result.agreeing_count != null
+            ? result.sifted_count - result.agreeing_count
+            : prev.siftedErrorCount,
       }));
       setErrorHistory((prev) => [...prev, errFraction]);
 
@@ -489,6 +528,8 @@ export const BB84Simulator = ({
       lostPhotons: [],
       eveInterceptions: [],
       matchingIndices: [],
+      siftedTotal: 0,
+      siftedErrorCount: 0,
       sharedKey: "",
       sharedKeyHash: "",
       errorRate: 0,
@@ -668,10 +709,15 @@ export const BB84Simulator = ({
                     sharedKey={state.sharedKey}
                     sharedKeyHash={state.sharedKeyHash}
                     errorRate={state.errorRate}
-                    isSecure={state.errorRate <= 0.11}
+                    isSecure={normalizeQberFraction(state.errorRate) <= 0.11}
                     matchingBits={state.matchingIndices.length}
+                    siftedTotal={state.siftedTotal}
+                    siftedErrorCount={state.siftedErrorCount}
                     totalBits={state.totalRounds}
                     errorHistory={errorHistory}
+                    hasCompared={
+                      state.step === "comparing" || state.step === "complete"
+                    }
                   />
                 </TabsContent>
                 <TabsContent value="log" className="mt-4">

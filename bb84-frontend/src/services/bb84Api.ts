@@ -31,14 +31,62 @@ export interface CompareBasesResponse {
   qber_percent?: number;
 }
 
-/** QBER as a fraction in [0, 1] from sifted keys (same definition as the backend). */
+/** Canonical BB84 bases: "+" rectilinear, "x" diagonal (ASCII only on the wire). */
+export function normalizeBasis(b: string | null | undefined): Basis {
+  if (b == null || b === "") return "+";
+  const t = String(b).trim();
+  if (t === "x" || t === "X" || t === "×" || t === "\u00d7") return "x";
+  return "+";
+}
+
+/** Single-bit compare (JSON-safe: coerces bool/number). */
+function bitEq(a: unknown, b: unknown): boolean {
+  const x = typeof a === "boolean" ? (a ? 1 : 0) : Number(a) & 1;
+  const y = typeof b === "boolean" ? (b ? 1 : 0) : Number(b) & 1;
+  return x === y;
+}
+
+/**
+ * BB84 QBER on the sifted string (standard definition, matches backend):
+ *   QBER = (# sifted positions where Alice’s bit ≠ Bob’s outcome) / (# sifted bits)
+ * “Sifted” = same basis on that round (lost photons excluded upstream).
+ * Returns a fraction in [0, 1], or null if inputs are unusable.
+ */
 export function computeQberFraction(
   alice: number[] | undefined,
   bob: number[] | undefined
 ): number | null {
-  if (!alice?.length || !bob || alice.length !== bob.length) return null;
-  const errors = alice.reduce((n, a, i) => n + (a !== bob[i] ? 1 : 0), 0);
-  return errors / alice.length;
+  if (!alice?.length || !bob?.length) return null;
+  const n = Math.min(alice.length, bob.length);
+  if (n === 0) return null;
+  let errors = 0;
+  for (let i = 0; i < n; i++) {
+    if (!bitEq(alice[i], bob[i])) errors++;
+  }
+  return errors / n;
+}
+
+export function countSiftedBitErrors(
+  alice: number[] | undefined,
+  bob: number[] | undefined
+): number {
+  if (!alice?.length || !bob?.length) return 0;
+  const n = Math.min(alice.length, bob.length);
+  let errors = 0;
+  for (let i = 0; i < n; i++) {
+    if (!bitEq(alice[i], bob[i])) errors++;
+  }
+  return errors;
+}
+
+/**
+ * UI state may store QBER as a fraction (0–1) or accidentally as percent (0–100).
+ * Returns a fraction in [0, 1] for display and progress bars.
+ */
+export function normalizeQberFraction(rate: number): number {
+  if (!Number.isFinite(rate) || rate < 0) return 0;
+  if (rate > 1) return Math.min(rate / 100, 1);
+  return Math.min(rate, 1);
 }
 
 export interface FinalKeyResponse {
@@ -77,7 +125,10 @@ export class BB84Api {
   }
 
   static async sendQubit(data: SendQubitRequest): Promise<void> {
-    await api.post("/alice/send", data);
+    await api.post("/alice/send", {
+      bit: data.bit,
+      basis: normalizeBasis(data.basis),
+    });
   }
 
   static async eveIntercept(
@@ -91,7 +142,7 @@ export class BB84Api {
   ): Promise<EveInterceptResponse> {
     const attackModel = params?.attackModel ?? "intercept-resend";
     const interceptProb = params?.interceptProb ?? 1;
-    const biasBasis = params?.biasBasis ?? "+";
+    const biasBasis = normalizeBasis(params?.biasBasis ?? "+");
     const biasProb = params?.biasProb ?? 0.75;
     const response = await api.get(
       `/eve/intercept/${index}?attack_model=${encodeURIComponent(
@@ -119,7 +170,7 @@ export class BB84Api {
     results: { eve: number; basis: Basis; measured: Bit }[];
   }> {
     const attackModel = params.attackModel ?? "intercept-resend";
-    const biasBasis = params.biasBasis ?? "+";
+    const biasBasis = normalizeBasis(params.biasBasis ?? "+");
     const biasProb = params.biasProb ?? 0.75;
     const response = await api.get(
       `/eves/intercept/${index}?count=${encodeURIComponent(
@@ -140,7 +191,7 @@ export class BB84Api {
   ): Promise<BobMeasureResponse> {
     const response = await api.post(
       `/bob/measure/${index}?loss_prob=${encodeURIComponent(String(lossProb))}`,
-      data
+      { basis: normalizeBasis(data.basis) }
     );
     return response.data;
   }

@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { motion } from "framer-motion";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -14,6 +15,7 @@ import {
   XCircle
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { normalizeQberFraction } from "@/services/bb84Api";
 
 export interface ResultsCardProps {
   sharedKey: string;
@@ -21,8 +23,13 @@ export interface ResultsCardProps {
   errorRate: number;
   isSecure: boolean;
   matchingBits: number;
+  /** Total sifted bits (same-basis positions); optional detail for QBER */
+  siftedTotal?: number;
+  siftedErrorCount?: number;
   totalBits: number;
   errorHistory?: number[];
+  /** After "Compare bases", show sifted QBER even before key generation */
+  hasCompared?: boolean;
 }
 
 export function ResultsCard({
@@ -31,10 +38,23 @@ export function ResultsCard({
   errorRate,
   isSecure,
   matchingBits,
+  siftedTotal = 0,
+  siftedErrorCount = 0,
   totalBits,
   errorHistory = [],
+  hasCompared = false,
 }: ResultsCardProps) {
   const { toast } = useToast();
+
+  /** Prefer counts (always matches “mismatched / sifted”); else normalized fraction from state. */
+  const qberFraction = useMemo(() => {
+    if (siftedTotal > 0) {
+      return Math.min(1, Math.max(0, siftedErrorCount / siftedTotal));
+    }
+    return normalizeQberFraction(errorRate);
+  }, [siftedTotal, siftedErrorCount, errorRate]);
+
+  const qberPercent = qberFraction * 100;
 
   const copyKey = () => {
     navigator.clipboard.writeText(sharedKey);
@@ -56,7 +76,7 @@ export function ResultsCard({
 
   const chartData = errorHistory.map((rate, index) => ({
     round: index + 1,
-    errorRate: rate * 100
+    errorRate: normalizeQberFraction(rate) * 100,
   }));
 
   const getSecurityStatus = () => {
@@ -138,12 +158,17 @@ export function ResultsCard({
           </div>
         )}
 
-        {/* Key Statistics */}
-        {sharedKey && (
+        {/* Key / sifting statistics */}
+        {(sharedKey || hasCompared) && (
           <div className="grid grid-cols-3 gap-4">
             <div className="text-center p-3 bg-muted/30 rounded-xl border border-border/60">
-              <div className="text-2xl font-bold text-primary">{sharedKey.length}</div>
+              <div className="text-2xl font-bold text-primary">
+                {sharedKey ? sharedKey.length : "—"}
+              </div>
               <div className="text-xs text-muted-foreground">Key Length</div>
+              <div className="text-[10px] text-muted-foreground mt-0.5">
+                Agreeing bits only
+              </div>
             </div>
             <div className="text-center p-3 bg-muted/30 rounded-xl border border-border/60">
               <div className="text-2xl font-bold text-success">{matchingBits}</div>
@@ -159,28 +184,41 @@ export function ResultsCard({
         {/* Error Rate */}
         <div className="space-y-2">
           <div className="flex items-center justify-between">
-            <label className="text-sm font-medium flex items-center gap-2">
-              <TrendingUp className="w-4 h-4" />
-              Quantum Bit Error Rate (QBER)
+            <label className="text-sm font-medium flex flex-col gap-0.5 items-start">
+              <span className="flex items-center gap-2">
+                <TrendingUp className="w-4 h-4" />
+                Quantum Bit Error Rate (QBER)
+              </span>
+              <span className="text-[11px] font-normal text-muted-foreground font-mono">
+                errors ÷ sifted bits (only rounds where Alice and Bob used the same basis)
+              </span>
             </label>
             <span className={`text-sm font-mono ${
-              errorRate > 0.11 ? "text-destructive" : 
-              errorRate > 0.05 ? "text-warning" : "text-success"
+              qberFraction > 0.11 ? "text-destructive" : 
+              qberFraction > 0.05 ? "text-warning" : "text-success"
             }`}>
-              {(errorRate * 100).toFixed(1)}%
+              {qberPercent.toFixed(1)}%
             </span>
           </div>
+          {siftedTotal > 0 && (
+            <div className="text-xs text-muted-foreground">
+              Mismatched bits on sifted key:{" "}
+              <span className="font-mono text-foreground">
+                {siftedErrorCount} / {siftedTotal}
+              </span>
+            </div>
+          )}
           <Progress 
-            value={errorRate * 100} 
+            value={qberPercent} 
             className="h-2"
           />
           <div className="text-xs text-muted-foreground">
-            {errorRate > 0.11 ? (
+            {qberFraction > 0.11 ? (
               <div className="flex items-center gap-1 text-destructive">
                 <AlertTriangle className="w-3 h-3" />
                 High error rate suggests eavesdropping
               </div>
-            ) : errorRate > 0.05 ? (
+            ) : qberFraction > 0.05 ? (
               <div className="text-warning">Moderate error rate detected</div>
             ) : (
               <div className="flex items-center gap-1 text-success">
@@ -227,7 +265,8 @@ export function ResultsCard({
         <div className="text-xs text-muted-foreground space-y-1 border-t pt-3">
           <div>• Error rates below 5% typically indicate secure transmission</div>
           <div>• Error rates above 11% suggest possible eavesdropping</div>
-          <div>• Only bits measured with matching bases form the shared key</div>
+          <div>• QBER is not “errors ÷ total photons”; mismatched bases are discarded in sifting</div>
+          <div>• Only bits measured with matching bases enter the sifted QBER and key</div>
         </div>
       </CardContent>
     </Card>

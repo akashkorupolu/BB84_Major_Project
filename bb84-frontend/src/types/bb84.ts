@@ -24,6 +24,10 @@ export interface ProtocolState {
   lostPhotons: boolean[];
   eveInterceptions: boolean[];
   matchingIndices: number[];
+  /** Sifted positions where Alice and Bob used the same basis */
+  siftedTotal: number;
+  /** Among sifted bits, how often Alice's bit ≠ Bob's measurement */
+  siftedErrorCount: number;
   sharedKey: string;
   sharedKeyHash: string;
   errorRate: number;

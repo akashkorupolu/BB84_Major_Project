@@ -1,5 +1,6 @@
 import { motion } from "framer-motion";
 import { Basis, Bit } from "@/types/bb84";
+import { normalizeBasis } from "@/services/bb84Api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -27,9 +28,10 @@ export const BobPanel = ({
   isManualMode = false,
 }: BobPanelProps) => {
   const basesMatch = (index: number) => {
-    return (
-      aliceBases[index] && bases[index] && aliceBases[index] === bases[index]
-    );
+    const a = aliceBases[index];
+    const b = bases[index];
+    if (a == null || b == null) return false;
+    return normalizeBasis(a) === normalizeBasis(b);
   };
 
   return (
@@ -105,7 +107,7 @@ export const BobPanel = ({
               className={`relative h-20 border-2 rounded-xl p-1 text-center transition-colors
         ${
           index <= currentRound
-            ? aliceBases[index] // only check match after reveal
+            ? aliceBases[index] != null // after basis reveal (compare/complete)
               ? basesMatch(index)
                 ? "bg-green-300 dark:bg-green-500 border-green-500"
                 : "bg-red-300 dark:bg-red-500 border-red-500"
@@ -120,7 +122,9 @@ export const BobPanel = ({
                   {/* Basis symbol */}
                   <div
                     className={`text-sm font-mono ${
-                      bases[index] === "+" ? "basis-plus" : "basis-cross"
+                      normalizeBasis(bases[index]) === "+"
+                        ? "basis-plus"
+                        : "basis-cross"
                     }`}
                   />
 
