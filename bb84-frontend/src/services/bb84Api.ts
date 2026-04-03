@@ -54,10 +54,8 @@ function bitEq(a: unknown, b: unknown): boolean {
 }
 
 /**
- * BB84 QBER on the sifted string (standard definition, matches backend):
- *   QBER = (# sifted positions where Alice’s bit ≠ Bob’s outcome) / (# sifted bits)
- * “Sifted” = same basis on that round (lost photons excluded upstream).
- * Returns a fraction in [0, 1], or null if inputs are unusable.
+ * QBER = (incorrect bits / compared bits); “compared” = sifted same-basis rounds
+ * (matches backend). Returns a fraction in [0, 1], or null if inputs are unusable.
  */
 export function computeQberFraction(
   alice: number[] | undefined,

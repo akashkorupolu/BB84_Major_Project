@@ -1,5 +1,4 @@
 import { useMemo } from "react";
-import { motion } from "framer-motion";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -23,16 +22,11 @@ export interface ResultsCardProps {
   errorRate: number;
   isSecure: boolean;
   matchingBits: number;
-  /** Total sifted bits (same-basis positions); optional detail for QBER */
   siftedTotal?: number;
   siftedErrorCount?: number;
   totalBits: number;
   errorHistory?: number[];
-  /** After "Compare bases", show sifted QBER even before key generation */
   hasCompared?: boolean;
-  /** Rounds discarded because Alice and Bob used different bases (not in QBER). */
-  discardedBasisMismatch?: number;
-  photonLostRounds?: number;
 }
 
 export function ResultsCard({
@@ -46,12 +40,9 @@ export function ResultsCard({
   totalBits,
   errorHistory = [],
   hasCompared = false,
-  discardedBasisMismatch = 0,
-  photonLostRounds = 0,
 }: ResultsCardProps) {
   const { toast } = useToast();
 
-  /** Prefer counts (always matches “mismatched / sifted”); else normalized fraction from state. */
   const qberFraction = useMemo(() => {
     if (siftedTotal > 0) {
       return Math.min(1, Math.max(0, siftedErrorCount / siftedTotal));
@@ -163,29 +154,6 @@ export function ResultsCard({
           </div>
         )}
 
-        {/* Key / sifting statistics */}
-        {(sharedKey || hasCompared) && (
-          <div className="rounded-lg border border-border/60 bg-muted/20 p-3 text-xs text-muted-foreground space-y-1.5">
-            <div className="font-medium text-foreground">How BB84 uses your rounds</div>
-            <p>
-              <span className="text-foreground font-mono">{discardedBasisMismatch}</span>{" "}
-              round(s) had <strong>different bases</strong> (Alice vs Bob). Those bits are{" "}
-              <strong>discarded</strong> in sifting — they are{" "}
-              <strong>not</strong> quantum bit errors and <strong>do not</strong> enter QBER.
-            </p>
-            {photonLostRounds > 0 && (
-              <p>
-                <span className="text-foreground font-mono">{photonLostRounds}</span> photon(s) lost
-                before measurement.
-              </p>
-            )}
-            <p>
-              <strong>QBER</strong> only measures wrong bits among{" "}
-              <strong>sifted</strong> rounds (same basis): bit errors ÷ sifted count.
-            </p>
-          </div>
-        )}
-
         {(sharedKey || hasCompared) && (
           <div className="grid grid-cols-3 gap-4">
             <div className="text-center p-3 bg-muted/30 rounded-xl border border-border/60">
@@ -193,9 +161,6 @@ export function ResultsCard({
                 {sharedKey ? sharedKey.length : "—"}
               </div>
               <div className="text-xs text-muted-foreground">Key Length</div>
-              <div className="text-[10px] text-muted-foreground mt-0.5">
-                Agreeing bits only
-              </div>
             </div>
             <div className="text-center p-3 bg-muted/30 rounded-xl border border-border/60">
               <div className="text-2xl font-bold text-success">{matchingBits}</div>
@@ -211,14 +176,9 @@ export function ResultsCard({
         {/* Error Rate */}
         <div className="space-y-2">
           <div className="flex items-center justify-between">
-            <label className="text-sm font-medium flex flex-col gap-0.5 items-start">
-              <span className="flex items-center gap-2">
-                <TrendingUp className="w-4 h-4" />
-                Quantum Bit Error Rate (QBER)
-              </span>
-              <span className="text-[11px] font-normal text-muted-foreground font-mono">
-                errors ÷ sifted bits (only rounds where Alice and Bob used the same basis)
-              </span>
+            <label className="text-sm font-medium flex items-center gap-2">
+              <TrendingUp className="w-4 h-4" />
+              Quantum Bit Error Rate (QBER)
             </label>
             <span className={`text-sm font-mono ${
               qberFraction > 0.11 ? "text-destructive" : 
@@ -228,11 +188,8 @@ export function ResultsCard({
             </span>
           </div>
           {siftedTotal > 0 && (
-            <div className="text-xs text-muted-foreground">
-              Mismatched bits on sifted key:{" "}
-              <span className="font-mono text-foreground">
-                {siftedErrorCount} / {siftedTotal}
-              </span>
+            <div className="text-xs text-muted-foreground font-mono">
+              {siftedErrorCount} / {siftedTotal}
             </div>
           )}
           <Progress 
@@ -288,13 +245,6 @@ export function ResultsCard({
           </div>
         )}
 
-        {/* Protocol Explanation */}
-        <div className="text-xs text-muted-foreground space-y-1 border-t pt-3">
-          <div>• Error rates below 5% typically indicate secure transmission</div>
-          <div>• Error rates above 11% suggest possible eavesdropping</div>
-          <div>• Different bases → discarded (shown above); they are not QBER errors</div>
-          <div>• QBER = bit errors only on sifted (same-basis) rounds, not ÷ total photons</div>
-        </div>
       </CardContent>
     </Card>
   );

@@ -58,8 +58,6 @@ export const BB84Simulator = ({
     matchingIndices: [],
     siftedTotal: 0,
     siftedErrorCount: 0,
-    discardedBasisMismatch: 0,
-    photonLostRounds: 0,
     sharedKey: "",
     sharedKeyHash: "",
     errorRate: 0,
@@ -152,8 +150,6 @@ export const BB84Simulator = ({
         matchingIndices: [],
         siftedTotal: 0,
         siftedErrorCount: 0,
-        discardedBasisMismatch: 0,
-        photonLostRounds: 0,
         sharedKey: "",
         sharedKeyHash: "",
         errorRate: 0,
@@ -372,7 +368,6 @@ export const BB84Simulator = ({
         result.qber_percent != null && !Number.isNaN(result.qber_percent)
           ? result.qber_percent / 100
           : null;
-      // Authoritative: errors ÷ sifted when we have counts (matches progress bar).
       const qberFraction =
         siftedTotal > 0
           ? siftedErrorCount / siftedTotal
@@ -388,20 +383,16 @@ export const BB84Simulator = ({
         matchingIndices: result.matching_indices,
         siftedTotal,
         siftedErrorCount,
-        discardedBasisMismatch: result.discarded_basis_mismatch ?? 0,
-        photonLostRounds: result.photon_lost ?? 0,
         errorRate: normalizeQberFraction(qberFraction),
       }));
 
       addMessage(
         "system",
-        `Publicly compared bases: ${result.matching_indices.length} sifted (same basis); ${
-          result.discarded_basis_mismatch ?? 0
-        } rounds discarded (different bases, not part of QBER)`
+        `Publicly compared bases: ${result.matching_indices.length} matches`
       );
       addMessage(
         "system",
-        `Sifted QBER: ${(qberFraction * 100).toFixed(1)}%`
+        `QBER: ${(qberFraction * 100).toFixed(1)}%`
       );
       addMessage(
         "alice",
@@ -486,14 +477,14 @@ export const BB84Simulator = ({
         if (result.shared_key_sha256) {
           addMessage("system", `SHA-256: ${result.shared_key_sha256}`);
         }
-        addMessage("system", `QBER (sifted bits): ${errPct.toFixed(1)}%`);
+        addMessage("system", `QBER: ${errPct.toFixed(1)}%`);
         if (
           result.sifted_count != null &&
           result.agreeing_count != null
         ) {
           addMessage(
             "system",
-            `Agreeing bits: ${result.agreeing_count} / ${result.sifted_count} sifted`
+            `${result.agreeing_count} / ${result.sifted_count} agreeing`
           );
         }
 
@@ -511,10 +502,10 @@ export const BB84Simulator = ({
       } else {
         addMessage(
           "system",
-          `❌ Key generation aborted: ${result.msg ?? "High QBER"}`
+          `❌ Key generation aborted: ${result.msg ?? "High error rate"}`
         );
         if (errPct > 0) {
-          addMessage("system", `QBER (sifted bits): ${errPct.toFixed(1)}%`);
+          addMessage("system", `QBER: ${errPct.toFixed(1)}%`);
         }
       }
     } catch (error) {
@@ -547,8 +538,6 @@ export const BB84Simulator = ({
       matchingIndices: [],
       siftedTotal: 0,
       siftedErrorCount: 0,
-      discardedBasisMismatch: 0,
-      photonLostRounds: 0,
       sharedKey: "",
       sharedKeyHash: "",
       errorRate: 0,
@@ -737,8 +726,6 @@ export const BB84Simulator = ({
                     hasCompared={
                       state.step === "comparing" || state.step === "complete"
                     }
-                    discardedBasisMismatch={state.discardedBasisMismatch}
-                    photonLostRounds={state.photonLostRounds}
                   />
                 </TabsContent>
                 <TabsContent value="log" className="mt-4">

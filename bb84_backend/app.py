@@ -67,16 +67,20 @@ def sifted_bit_errors(alice_bits: list, bob_bits: list) -> int:
     )
 
 
-def bb84_qber_fraction(errors: int, sifted_count: int) -> float:
-    """Standard BB84 QBER on the sifted sample: errors / sifted_count → [0, 1]."""
-    if sifted_count <= 0:
+def bb84_qber_fraction(errors: int, n_compared: int) -> float:
+    """QBER fraction = (number of incorrect bits) / (total number of compared bits).
+
+    In BB84, “compared bits” are the sifted positions (same basis at Alice and Bob).
+    Returns a value in [0, 1].
+    """
+    if n_compared <= 0:
         return 0.0
-    return float(errors) / float(sifted_count)
+    return float(errors) / float(n_compared)
 
 
-def bb84_qber_percent(errors: int, sifted_count: int) -> float:
-    """Same as bb84_qber_fraction, percentage in [0, 100]."""
-    return 100.0 * bb84_qber_fraction(errors, sifted_count)
+def bb84_qber_percent(errors: int, n_compared: int) -> float:
+    """QBER (%) = (incorrect bits / compared bits) × 100 — see bb84_qber_fraction."""
+    return 100.0 * bb84_qber_fraction(errors, n_compared)
 
 
 def pick_eve_basis(attack_model: str, bias_basis: str, bias_prob: float) -> str:
