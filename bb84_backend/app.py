@@ -270,19 +270,32 @@ def compare_bases():
     if not qubits_sent or not qubits_bob:
         return {"error": "No qubits to compare"}
 
+    na, nb = len(qubits_sent), len(qubits_bob)
+    if na != nb:
+        return {
+            "error": "Round mismatch: click Prepare (resets the server) then Send once.",
+            "len_sent": na,
+            "len_bob": nb,
+        }
+
     matching_indices = []
     alice_key = []
     bob_key = []
+    photon_lost = 0
+    discarded_basis_mismatch = 0
 
-    for i in range(min(len(qubits_sent), len(qubits_bob))):
+    for i in range(na):
         if not qubits_bob[i]:
+            photon_lost += 1
             continue
-        if normalize_basis(qubits_sent[i]["basis"]) == normalize_basis(
-            qubits_bob[i]["basis"]
-        ):
+        a_b = normalize_basis(qubits_sent[i]["basis"])
+        b_b = normalize_basis(qubits_bob[i]["basis"])
+        if a_b == b_b:
             matching_indices.append(i)
             alice_key.append(_bit_value(qubits_sent[i]["bit"]))
             bob_key.append(_bit_value(qubits_bob[i]["measured"]))
+        else:
+            discarded_basis_mismatch += 1
 
     n = len(alice_key)
     error_count = sifted_bit_errors(alice_key, bob_key) if n else 0
@@ -294,6 +307,9 @@ def compare_bases():
         "bob_key": bob_key,
         "error_count": error_count,
         "qber_percent": qber_percent,
+        "photon_lost": photon_lost,
+        "discarded_basis_mismatch": discarded_basis_mismatch,
+        "received_rounds": na - photon_lost,
     }
 
 

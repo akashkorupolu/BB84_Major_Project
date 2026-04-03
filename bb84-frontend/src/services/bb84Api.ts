@@ -29,6 +29,13 @@ export interface CompareBasesResponse {
   error_count?: number;
   /** QBER in percent (0–100), computed on sifted bits */
   qber_percent?: number;
+  photon_lost?: number;
+  /** Same-basis rounds only; basis mismatches are not “errors” in QBER */
+  discarded_basis_mismatch?: number;
+  received_rounds?: number;
+  error?: string;
+  len_sent?: number;
+  len_bob?: number;
 }
 
 /** Canonical BB84 bases: "+" rectilinear, "x" diagonal (ASCII only on the wire). */

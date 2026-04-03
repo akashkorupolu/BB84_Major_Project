@@ -58,6 +58,8 @@ export const BB84Simulator = ({
     matchingIndices: [],
     siftedTotal: 0,
     siftedErrorCount: 0,
+    discardedBasisMismatch: 0,
+    photonLostRounds: 0,
     sharedKey: "",
     sharedKeyHash: "",
     errorRate: 0,
@@ -150,6 +152,8 @@ export const BB84Simulator = ({
         matchingIndices: [],
         siftedTotal: 0,
         siftedErrorCount: 0,
+        discardedBasisMismatch: 0,
+        photonLostRounds: 0,
         sharedKey: "",
         sharedKeyHash: "",
         errorRate: 0,
@@ -348,6 +352,15 @@ export const BB84Simulator = ({
 
       const result = await BB84Api.compareBases();
 
+      if ("error" in result && result.error) {
+        toast({
+          title: "Cannot compare bases",
+          description: result.error,
+          variant: "destructive",
+        });
+        return;
+      }
+
       const siftedTotal = result.alice_key?.length ?? 0;
       const siftedErrorCount =
         result.error_count != null && !Number.isNaN(result.error_count)
@@ -375,12 +388,16 @@ export const BB84Simulator = ({
         matchingIndices: result.matching_indices,
         siftedTotal,
         siftedErrorCount,
+        discardedBasisMismatch: result.discarded_basis_mismatch ?? 0,
+        photonLostRounds: result.photon_lost ?? 0,
         errorRate: normalizeQberFraction(qberFraction),
       }));
 
       addMessage(
         "system",
-        `Publicly compared bases: ${result.matching_indices.length} matches found`
+        `Publicly compared bases: ${result.matching_indices.length} sifted (same basis); ${
+          result.discarded_basis_mismatch ?? 0
+        } rounds discarded (different bases, not part of QBER)`
       );
       addMessage(
         "system",
@@ -530,6 +547,8 @@ export const BB84Simulator = ({
       matchingIndices: [],
       siftedTotal: 0,
       siftedErrorCount: 0,
+      discardedBasisMismatch: 0,
+      photonLostRounds: 0,
       sharedKey: "",
       sharedKeyHash: "",
       errorRate: 0,
@@ -718,6 +737,8 @@ export const BB84Simulator = ({
                     hasCompared={
                       state.step === "comparing" || state.step === "complete"
                     }
+                    discardedBasisMismatch={state.discardedBasisMismatch}
+                    photonLostRounds={state.photonLostRounds}
                   />
                 </TabsContent>
                 <TabsContent value="log" className="mt-4">

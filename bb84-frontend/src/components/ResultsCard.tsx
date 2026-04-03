@@ -30,6 +30,9 @@ export interface ResultsCardProps {
   errorHistory?: number[];
   /** After "Compare bases", show sifted QBER even before key generation */
   hasCompared?: boolean;
+  /** Rounds discarded because Alice and Bob used different bases (not in QBER). */
+  discardedBasisMismatch?: number;
+  photonLostRounds?: number;
 }
 
 export function ResultsCard({
@@ -43,6 +46,8 @@ export function ResultsCard({
   totalBits,
   errorHistory = [],
   hasCompared = false,
+  discardedBasisMismatch = 0,
+  photonLostRounds = 0,
 }: ResultsCardProps) {
   const { toast } = useToast();
 
@@ -160,6 +165,28 @@ export function ResultsCard({
 
         {/* Key / sifting statistics */}
         {(sharedKey || hasCompared) && (
+          <div className="rounded-lg border border-border/60 bg-muted/20 p-3 text-xs text-muted-foreground space-y-1.5">
+            <div className="font-medium text-foreground">How BB84 uses your rounds</div>
+            <p>
+              <span className="text-foreground font-mono">{discardedBasisMismatch}</span>{" "}
+              round(s) had <strong>different bases</strong> (Alice vs Bob). Those bits are{" "}
+              <strong>discarded</strong> in sifting — they are{" "}
+              <strong>not</strong> quantum bit errors and <strong>do not</strong> enter QBER.
+            </p>
+            {photonLostRounds > 0 && (
+              <p>
+                <span className="text-foreground font-mono">{photonLostRounds}</span> photon(s) lost
+                before measurement.
+              </p>
+            )}
+            <p>
+              <strong>QBER</strong> only measures wrong bits among{" "}
+              <strong>sifted</strong> rounds (same basis): bit errors ÷ sifted count.
+            </p>
+          </div>
+        )}
+
+        {(sharedKey || hasCompared) && (
           <div className="grid grid-cols-3 gap-4">
             <div className="text-center p-3 bg-muted/30 rounded-xl border border-border/60">
               <div className="text-2xl font-bold text-primary">
@@ -265,8 +292,8 @@ export function ResultsCard({
         <div className="text-xs text-muted-foreground space-y-1 border-t pt-3">
           <div>• Error rates below 5% typically indicate secure transmission</div>
           <div>• Error rates above 11% suggest possible eavesdropping</div>
-          <div>• QBER is not “errors ÷ total photons”; mismatched bases are discarded in sifting</div>
-          <div>• Only bits measured with matching bases enter the sifted QBER and key</div>
+          <div>• Different bases → discarded (shown above); they are not QBER errors</div>
+          <div>• QBER = bit errors only on sifted (same-basis) rounds, not ÷ total photons</div>
         </div>
       </CardContent>
     </Card>

@@ -28,6 +28,10 @@ export interface ProtocolState {
   siftedTotal: number;
   /** Among sifted bits, how often Alice's bit ≠ Bob's measurement */
   siftedErrorCount: number;
+  /** Rounds where Bob got a photon but Alice’s and Bob’s bases differ (discarded; not QBER). */
+  discardedBasisMismatch: number;
+  /** Rounds where the photon was lost (Bob has no measurement). */
+  photonLostRounds: number;
   sharedKey: string;
   sharedKeyHash: string;
   errorRate: number;
