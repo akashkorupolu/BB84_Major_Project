@@ -338,10 +338,16 @@ export const BB84Simulator = ({
 
       const result = await BB84Api.compareBases();
 
+      const qberFraction =
+        result.qber_percent != null && !Number.isNaN(result.qber_percent)
+          ? result.qber_percent / 100
+          : 0;
+
       setState((prev) => ({
         ...prev,
         step: "comparing",
         matchingIndices: result.matching_indices,
+        errorRate: qberFraction,
       }));
 
       addMessage(
@@ -380,24 +386,47 @@ export const BB84Simulator = ({
 
       const result = await BB84Api.getFinalKey();
 
+      if ("error" in result && result.error) {
+        toast({
+          title: "Compare bases first",
+          description: result.error,
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const errPct =
+        result.error_rate != null && !Number.isNaN(result.error_rate)
+          ? result.error_rate
+          : 0;
+      const errFraction = errPct / 100;
+
       setState((prev) => ({
         ...prev,
         step: "complete",
-        sharedKey: result.shared_key || "",
-        sharedKeyHash: result.shared_key_sha256 || "",
-        errorRate: result.error_rate / 100, // normalize backend percentage
+        sharedKey: result.shared_key ?? "",
+        sharedKeyHash: result.shared_key_sha256 ?? "",
+        errorRate: errFraction,
       }));
-      setErrorHistory((prev) => [...prev, result.error_rate / 100]); // ✅ history normalized too
+      setErrorHistory((prev) => [...prev, errFraction]);
 
       if (result.shared_key) {
         addMessage("system", `✅ Shared key generated: ${result.shared_key}`);
         if (result.shared_key_sha256) {
           addMessage("system", `SHA-256: ${result.shared_key_sha256}`);
         }
-        addMessage("system", `Error rate: ${result.error_rate.toFixed(1)}%`);
+        addMessage("system", `QBER (sifted bits): ${errPct.toFixed(1)}%`);
+        if (
+          result.sifted_count != null &&
+          result.agreeing_count != null
+        ) {
+          addMessage(
+            "system",
+            `Agreeing bits: ${result.agreeing_count} / ${result.sifted_count} sifted`
+          );
+        }
 
-        if (result.error_rate > 20) {
-          // backend already returns percent
+        if (errPct > 20) {
           addMessage(
             "system",
             "⚠️ High error rate detected - possible eavesdropping!"
@@ -409,7 +438,13 @@ export const BB84Simulator = ({
           );
         }
       } else {
-        addMessage("system", `❌ Key generation aborted: ${result.msg}`);
+        addMessage(
+          "system",
+          `❌ Key generation aborted: ${result.msg ?? "High QBER"}`
+        );
+        if (errPct > 0) {
+          addMessage("system", `QBER (sifted bits): ${errPct.toFixed(1)}%`);
+        }
       }
     } catch (error) {
       toast({

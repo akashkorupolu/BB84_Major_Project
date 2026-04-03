@@ -26,13 +26,19 @@ export interface CompareBasesResponse {
   matching_indices: number[];
   alice_key: number[];
   bob_key: number[];
+  error_count?: number;
+  /** QBER in percent (0–100), computed on sifted bits */
+  qber_percent?: number;
 }
 
 export interface FinalKeyResponse {
   shared_key?: string;
-  shared_key_sha256?: string;
-  error_rate: number;
+  shared_key_sha256?: string | null;
+  error_rate?: number;
+  sifted_count?: number;
+  agreeing_count?: number;
   msg?: string;
+  error?: string;
 }
 
 export interface BobMeasureResponse {

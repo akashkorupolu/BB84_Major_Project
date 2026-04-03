@@ -236,10 +236,18 @@ def compare_bases():
             alice_key.append(qubits_sent[i]["bit"])
             bob_key.append(qubits_bob[i]["measured"])
 
+    n = len(alice_key)
+    error_count = (
+        sum(1 for i in range(n) if alice_key[i] != bob_key[i]) if n else 0
+    )
+    qber_percent = (error_count / n) * 100.0 if n else 0.0
+
     return {
         "matching_indices": matching_indices,
         "alice_key": alice_key,
         "bob_key": bob_key,
+        "error_count": error_count,
+        "qber_percent": qber_percent,
     }
 
 
@@ -259,18 +267,33 @@ def final_key():
     errors = sum(1 for i in range(len(alice_key)) if alice_key[i] != bob_key[i])
     error_rate = (errors / len(alice_key)) * 100
 
+    # Only bits where Alice and Bob agree form the usable shared secret (after sifting).
+    agreeing_bits = [
+        alice_key[i]
+        for i in range(len(alice_key))
+        if alice_key[i] == bob_key[i]
+    ]
+
     if error_rate < 20:
-        shared_key = "".join(map(str, alice_key))
-        sha256 = hashlib.sha256(shared_key.encode("utf-8")).hexdigest()
+        shared_key = "".join(map(str, agreeing_bits))
+        sha256 = (
+            hashlib.sha256(shared_key.encode("utf-8")).hexdigest()
+            if shared_key
+            else None
+        )
         return {
             "shared_key": shared_key,
             "shared_key_sha256": sha256,
-            "error_rate": error_rate
+            "error_rate": error_rate,
+            "sifted_count": len(alice_key),
+            "agreeing_count": len(agreeing_bits),
         }
     else:
         return {
             "msg": "High error rate detected → possible eavesdropper",
-            "error_rate": error_rate
+            "error_rate": error_rate,
+            "sifted_count": len(alice_key),
+            "agreeing_count": len(agreeing_bits),
         }
 
 
